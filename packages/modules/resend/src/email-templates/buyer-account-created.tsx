@@ -21,7 +21,7 @@ export const BuyerAccountCreatedEmailTemplate: React.FC<
       }}
     >
       <h1 style={{ fontSize: "2rem", marginBottom: "16px", color: "#222" }}>
-        Welcome to Mercur, {data.user_name}!
+        Welcome to Grox & Gloryx, {data.user_name}!
       </h1>
       <p style={{ fontSize: "1.1rem", marginBottom: "24px" }}>
         We’re excited to have you join us on this journey.
