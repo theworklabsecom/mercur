@@ -38,19 +38,23 @@ RUN yarn turbo build
 FROM base AS runner
 WORKDIR /app
 
+# Install postgresql-client for health checks
+RUN apk add --no-cache postgresql-client
+
 # Don't run production as root
 RUN addgroup --system --gid 1001 medusa
 RUN adduser --system --uid 1001 medusa
 
-# Ensure the medusa user owns the backend folder
-RUN mkdir -p /app/apps/backend/static
-RUN chown -R medusa:medusa /app/apps/backend
+# Copy application from installer
+COPY --from=installer --chown=medusa:medusa /app .
 
-USER medusa
-COPY --from=installer /app .
+# Copy entrypoint script from build context
+COPY --chown=medusa:medusa apps/backend/docker-entrypoint.sh /app/apps/backend/docker-entrypoint.sh
+RUN chmod +x /app/apps/backend/docker-entrypoint.sh
 
 WORKDIR /app/apps/backend
 
-RUN yarn db:migrate
+USER medusa
 
-CMD ["yarn", "start"]
+# Migrations will be run via entrypoint script
+ENTRYPOINT ["/app/apps/backend/docker-entrypoint.sh"]

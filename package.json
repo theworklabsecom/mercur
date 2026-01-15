@@ -16,8 +16,8 @@
   ],
   "scripts": {
     "mercur-exec": "turbo run dev",
-    "dev": "turbo run dev",
-    "build": "turbo run build",
+    "dev": "node api.js && turbo run dev",
+    "build": "node api.js && turbo run build",
     "format": "turbo run format",
     "lint": "turbo run lint",
     "codegen": "cd .",

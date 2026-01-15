@@ -1,0 +1,114 @@
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: mercur-postgres
+    environment:
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: medusa
+      POSTGRES_DB: medusa
+    # Port not exposed - backend connects via Docker network
+    # Uncomment below if you need to access PostgreSQL from host
+    # ports:
+    #   - "5441:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medusa"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mercur-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: mercur-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mercur-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: mercur-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Database - disable SSL for Docker PostgreSQL
+      # Add ?sslmode=disable to the URL itself for MikroORM/node-postgres
+      DATABASE_URL: postgresql://medusa:medusa@postgres:5432/medusa?sslmode=disable
+      DB_NAME: medusa
+      # Force node-postgres/MikroORM to NOT use SSL (multiple ways to ensure it works)
+      PGSSLMODE: disable
+      PGSSL: "false"
+      # Additional PostgreSQL connection options
+      POSTGRES_SSL: "false"
+      
+      # CORS
+      STORE_CORS: http://localhost:3000
+      ADMIN_CORS: http://localhost:9000
+      VENDOR_CORS: http://localhost:5173
+      AUTH_CORS: http://localhost:9000,http://localhost:5173,http://localhost:3000
+      
+      # Redis
+      REDIS_URL: redis://redis:6379
+      
+      # Secrets
+      JWT_SECRET: ${JWT_SECRET:-supersecret}
+      COOKIE_SECRET: ${COOKIE_SECRET:-supersecret}
+      
+      # Stripe
+      STRIPE_SECRET_API_KEY: ${STRIPE_SECRET_API_KEY:-supersecret}
+      STRIPE_CONNECTED_ACCOUNTS_WEBHOOK_SECRET: ${STRIPE_CONNECTED_ACCOUNTS_WEBHOOK_SECRET:-supersecret}
+      
+      # Resend
+      RESEND_API_KEY: ${RESEND_API_KEY:-supersecret}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-onboarding@resend.dev}
+      
+      # Algolia
+      ALGOLIA_APP_ID: ${ALGOLIA_APP_ID:-XXX}
+      ALGOLIA_API_KEY: ${ALGOLIA_API_KEY:-supersecret}
+      
+      # TalkJS
+      VITE_TALK_JS_APP_ID: ${VITE_TALK_JS_APP_ID:-xxx}
+      VITE_TALK_JS_SECRET_API_KEY: ${VITE_TALK_JS_SECRET_API_KEY:-xxx}
+      
+      # URLs
+      VENDOR_PANEL_URL: ${VENDOR_PANEL_URL:-http://localhost:5173}
+      STOREFRONT_URL: ${STOREFRONT_URL:-http://localhost:7001}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:9000}
+      
+      # Node
+      NODE_ENV: production
+    ports:
+      - "9000:9000"
+    volumes:
+      - backend_data:/app/apps/backend/.medusa
+    networks:
+      - mercur-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_data:
+    driver: local
+
+networks:
+  mercur-network:
+    driver: bridge
+
