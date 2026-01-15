@@ -64,30 +64,31 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     const fieldsString = Array.isArray(req.query.fields)
       ? req.query.fields[0]
       : req.query.fields
-    fields = fieldsString
-      .split(',')
-      .map((f) => f.trim())
-      .filter((f) => {
-        // Remove invalid calculated_price field references
-        // Keep *variants but remove *variants.calculated_price or variants.calculated_price
-        if (
-          f.includes('calculated_price') &&
-          (f.includes('variants.calculated_price') ||
-            f.includes('*variants.calculated_price'))
-        ) {
-          return false
-        }
-        return true
-      })
+    if (typeof fieldsString === 'string') {
+      fields = fieldsString
+        .split(',')
+        .map((f) => f.trim())
+        .filter((f) => {
+          // Remove invalid calculated_price field references
+          // Keep *variants but remove *variants.calculated_price or variants.calculated_price
+          if (
+            f.includes('calculated_price') &&
+            (f.includes('variants.calculated_price') ||
+              f.includes('*variants.calculated_price'))
+          ) {
+            return false
+          }
+          return true
+        })
+    }
   }
 
   // Parse pagination
-  const offset = req.query.offset
-    ? parseInt(Array.isArray(req.query.offset) ? req.query.offset[0] : req.query.offset)
-    : 0
-  const limit = req.query.limit
-    ? parseInt(Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit)
-    : 100
+  const offsetValue = Array.isArray(req.query.offset) ? req.query.offset[0] : req.query.offset
+  const offset = offsetValue ? parseInt(typeof offsetValue === 'string' ? offsetValue : String(offsetValue)) : 0
+  
+  const limitValue = Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit
+  const limit = limitValue ? parseInt(typeof limitValue === 'string' ? limitValue : String(limitValue)) : 100
 
   // Build filters - only include status if not provided (default to published for store)
   const filters: Record<string, any> = {
